@@ -1,0 +1,81 @@
+def NODE = "CTG-LINUX-NODES"
+def TRANSFER_SET = ""
+def stageSucceed = true
+
+node (NODE) {
+echo " SCM check out stage of the pipeline"
+stage ("SCM checkout for git repo"){
+   checkout([$class: 'GitSCM', branches: [[name: '*/master']], \
+  doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], \
+  userRemoteConfigs: [[credentialsId: '37773731-a236-456d-a516-e8acd3f28343', \
+  url: 'https://github.com/akharaiyi/simple-java-maven-app.git']]])
+  sh "ls -ltra"
+
+
+}
+// run all pipeline stage with docker images customerize from ECC registry
+echo "maven test"
+// stage("maven test") {
+//     stageSucceed = true
+//     docker.image("maven").inside('-u root'){
+//         sh "mvn -v"
+//         sh "mvn clean  test"
+//     }
+
+//     // stageSucceed = false
+    
+// }
+
+// run sonar stage on the pipeline using docker container
+stage("python") {
+    docker.image("python").inside("-u root") {
+        sh "python"
+    }
+    
+}
+// run directory check all file  pull down from 
+stage("dir_check"){
+    sh """
+     ls -ltra 
+     echo ${WORKSPACE}
+     cd ${WORKSPACE} && cat Makefile | grep run_*
+     """
+}
+
+//stage('Sonar_Gate') {
+//echo " starting the sonarqube stage on the pipeline for static code analysis"
+//echo "sonar runn.............."
+//echo "sonar scan done................."
+// if ("${currentBuild.currentResult}" == "FAILURE") {
+//     echo "fail build"
+// }
+
+//}
+
+stage(SONAR_GATE) {
+// CTGCUSTOMERGATE()
+
+}
+
+stage(SONAR_PROFILE) {
+   // CTGPROFILE()
+}
+
+stage("checksuccess") {   
+    echo "${WORKSPACE}"
+    cd "${WORKSPACE}"
+    def checksonar  = sh(script: "cat JenkinsFile1 |  grep 'SONAR_GATE' ", returnStdout: true ).trim()
+    def checkprofile = sh(script: "cat JenkinsFile1 | grep 'SONAR_PROFILE'", returnStdout: true).trim()
+    if( "${checksonar}" || "${checkprofile}"){
+      echo "We have  SONAR_GATE AND SONAR_PROFILE  in this jenkinsfile"
+      echo  "${checkprofile}......."
+      echo  "${checksonar}........"  
+    }
+
+
+
+}
+
+}
+
+
